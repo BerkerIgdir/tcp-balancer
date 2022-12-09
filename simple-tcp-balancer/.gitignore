@@ -1,0 +1,16 @@
+.project
+.classpath
+.settings
+.log
+.gradle
+.idea
+target/
+build/
+out/
+runtime/
+/.settings/
+/.idea/
+bin/
+*.iml
+local.properties
+.DS_Store
