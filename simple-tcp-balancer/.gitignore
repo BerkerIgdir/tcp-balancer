@@ -13,4 +13,4 @@ runtime/
 bin/
 *.iml
 local.properties
-.DS_Store
+.DS_Store/
