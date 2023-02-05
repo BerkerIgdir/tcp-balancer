@@ -1,4 +1,7 @@
 package berker.tcp.balancer;
 
-public record RegisteredServer(String url, int port) {
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public record RegisteredServer(@JsonProperty("url") String url,
+                               @JsonProperty("port") int port) {
 }

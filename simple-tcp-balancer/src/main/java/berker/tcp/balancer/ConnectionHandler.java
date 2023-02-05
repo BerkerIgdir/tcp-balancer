@@ -1,10 +1,13 @@
 package berker.tcp.balancer;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.concurrent.BlockingQueue;
 
 public class ConnectionHandler implements Runnable {
+
     private final Socket client;
     private final BlockingQueue<RegisteredServer> registeredServers;
 
@@ -16,33 +19,50 @@ public class ConnectionHandler implements Runnable {
     @Override
     public void run() {
         try {
-
             var inputStream = client.getInputStream();
-            var serverToRedirect = registeredServers.take();
-            var clientToAppServer = new Socket(serverToRedirect.url(), serverToRedirect.port());
-            var clientToAppOutputStream = clientToAppServer.getOutputStream();
-            int readByte = 0;
-            readByte = inputStream.read();
-            while (readByte != -1) {
-                clientToAppOutputStream.write(readByte);
-                readByte = inputStream.read();
-            }
-            clientToAppOutputStream.flush();
+            var serverToRedirectPojo = registeredServers.take();
+            var servertoRedirectSocket = new Socket(serverToRedirectPojo.url(), serverToRedirectPojo.port());
+            var serverToRedirectOutputStream = servertoRedirectSocket.getOutputStream();
+            var buffer = new byte[2048];
+            var clientInputStream = client.getInputStream();
+            var sentBytes = clientInputStream.read(buffer, 0, inputStream.available());
+            System.out.println("number of redirected bytes is " + sentBytes);
 
-            var responseInputStream = clientToAppServer.getInputStream();
-            var clientOutputStream = client.getOutputStream();
-            var responseByte = responseInputStream.read();
-            while (responseByte != -1) {
-                clientOutputStream.write(responseByte);
-                responseByte = responseInputStream.read();
-            }
-            clientOutputStream.flush();
+            servertoRedirectSocket.getOutputStream().write(Arrays.copyOfRange(buffer, 0, sentBytes));
+            serverToRedirectOutputStream.flush();
 
+            synchronized (this) {
+                Thread.ofVirtual().start(() -> {
+                    try {
+                        notifier(servertoRedirectSocket.getInputStream());
+                    } catch (IOException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+                wait(500);
+                if (servertoRedirectSocket.getInputStream().available() <= 0) {
+                    throw new RuntimeException("TIMEOUT EXCEPTION");
+                }
+            }
+
+            var serverToRedirectSocketInputStream = servertoRedirectSocket.getInputStream();
+            var readBytes = serverToRedirectSocketInputStream.read(buffer, 0, serverToRedirectSocketInputStream.available());
+
+            client.getOutputStream().write(Arrays.copyOfRange(buffer, 0, readBytes));
+            client.getOutputStream().flush();
             client.close();
-            clientToAppServer.close();
+            servertoRedirectSocket.close();
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
-
     }
+
+    private void notifier(InputStream inputStream) throws IOException, InterruptedException {
+        while (inputStream.available() == 0) {
+
+        }
+        notifyAll();
+    }
+
+
 }

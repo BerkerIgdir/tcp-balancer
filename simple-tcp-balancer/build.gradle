@@ -14,8 +14,7 @@ repositories {
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
-    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.0.1'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.0'
 }
 application {
     mainClass.set("berker.tcp.balancer.Main")
@@ -25,7 +24,6 @@ tasks.withType(JavaCompile) {
     options.compilerArgs += "--enable-preview"
     options.compilerArgs += "-Xlint:preview"
     options.release = 19
-
 }
 tasks.withType(Test) {
     jvmArgs += "--enable-preview"

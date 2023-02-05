@@ -5,16 +5,17 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class ServerRegisterController {
     private static final int DEFAULT_PORT = 8089;
     private static final String POST_METHOD = "POST";
     private static final ObjectMapper objectMapper = new ObjectMapper();
-
-    private static final Set<RegisteredServer> serverSet = Collections.synchronizedSet(new LinkedHashSet<>());
 
     private final HttpServer httpServer;
 
@@ -34,13 +35,13 @@ public class ServerRegisterController {
         }
     }
 
-    public void startServer(){
+    public void startServer() {
         createContext();
         httpServer.start();
     }
 
-    private void createContext(){
-        httpServer.createContext("/register",new RegisterHandler());
+    private void createContext() {
+        httpServer.createContext("/register", new RegisterHandler());
     }
 
     static class RegisterHandler implements HttpHandler {
@@ -49,8 +50,10 @@ public class ServerRegisterController {
             if (!POST_METHOD.equalsIgnoreCase(exchange.getRequestMethod())) {
                 exchange.sendResponseHeaders(404, 0);
             }
-            RegisteredServer serializedObject = objectMapper.readValue(exchange.getRequestBody(), RegisteredServer.class);
-            serverSet.add(serializedObject);
+            var deSerializedObject = objectMapper.readValue(exchange.getRequestBody().readAllBytes(), RegisteredServer.class);
+            Main.serverQueue.add(deSerializedObject);
+            exchange.sendResponseHeaders(200, 0);
         }
     }
+
 }
