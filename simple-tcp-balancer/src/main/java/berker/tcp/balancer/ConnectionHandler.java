@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ConnectionHandler implements Runnable {
 
@@ -32,14 +33,16 @@ public class ConnectionHandler implements Runnable {
             serverToRedirectOutputStream.flush();
 
             synchronized (this) {
+                var atomicBool = new AtomicBoolean(false);
                 Thread.ofVirtual().start(() -> {
                     try {
-                        notifier(servertoRedirectSocket.getInputStream());
+                        notifier(servertoRedirectSocket.getInputStream(), atomicBool);
                     } catch (IOException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
                 });
                 wait(500);
+                atomicBool.set(true);
                 if (servertoRedirectSocket.getInputStream().available() <= 0) {
                     throw new RuntimeException("TIMEOUT EXCEPTION");
                 }
@@ -57,8 +60,8 @@ public class ConnectionHandler implements Runnable {
         }
     }
 
-    private void notifier(InputStream inputStream) throws IOException, InterruptedException {
-        while (inputStream.available() == 0) {
+    private void notifier(InputStream inputStream, AtomicBoolean atomicBoolean) throws IOException, InterruptedException {
+        while (inputStream.available() <= 0 || !atomicBoolean.get()) {
 
         }
         notifyAll();
